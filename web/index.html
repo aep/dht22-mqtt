@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>ESP MQTT</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="http://fonts.googleapis.com/css?family=Raleway:100,200,300,400,500,600,700,800,900" rel="stylesheet" type="text/css">
+        <style>
+            * {
+                margin:0;
+                padding:0;
+            }
+            html {
+                height:100%;
+            }
+            body {
+                height:100%;
+                background-position: center center;
+                background-repeat:no-repeat;
+                background-size: cover;
+                background-image: url(esp.jpg);
+                font-family: "Raleway";
+                font-style: normal;
+                font-weight: 300;
+                color:#fff;
+                text-align: center;
+                overflow:hidden;
+                text-shadow: #333 0px 0px 5px;
+            }
+            h1 {
+                margin:0 auto;
+                border-bottom:1px solid #333;
+                width:100%;
+                background:#666;
+
+            }
+            #ws {
+                position:absolute;
+                font-size:150%;
+                width:100%;
+                top:30%;
+                line-height:3em;
+            }
+            p {
+                padding:0.4em;
+                font-size:80%;
+            }
+            a {
+                color:#fff;
+            }
+
+            #temp {
+                font-size:300%;
+                display:block;
+            }
+            #humid {
+                font-size:300%;
+                display:block;
+            }
+
+            #footer{
+                position: absolute;
+                bottom:0;
+                width:100%;
+                background:rgba(100,100,100,0.6);
+                border-top:1px solid #333;
+            }
+        </style>
+        <script src="mqttws31.js" type="text/javascript"></script>
+        <script src="jquery.min.js" type="text/javascript"></script>
+        <script src="config.js" type="text/javascript"></script>
+
+        <script type="text/javascript">
+            var mqtt;
+            var reconnectTimeout = 2000;
+
+            function MQTTconnect() {
+                mqtt = new Paho.MQTT.Client(
+                    host,
+                    port,
+                    "web_" + parseInt(Math.random() * 100,
+                                      10));
+                                      var options = {
+                                          timeout: 3,
+                                          useSSL: useTLS,
+                                          cleanSession: cleansession,
+                                          onSuccess: onConnect,
+                                          onFailure: function (message) {
+                                              $('#status').html("Connection failed: " + message.errorMessage + "Retrying");
+                                              setTimeout(MQTTconnect, reconnectTimeout);
+                                          }
+                                      };
+
+                                      mqtt.onConnectionLost = onConnectionLost;
+                                      mqtt.onMessageArrived = onMessageArrived;
+
+                                      if (username != null) {
+                                          options.userName = username;
+                                          options.password = password;
+                                      }
+                                      console.log("Host="+ host + ", port=" + port + " TLS = " + useTLS + " username=" + username + " password=" + password);
+                                      mqtt.connect(options);
+            }
+
+            function onConnect() {
+                $('#status').html('Connected to ' + host + ':' + port);
+                // Connection succeeded; subscribe to our topic
+                mqtt.subscribe(topic, {qos: 0});
+                $('#topic').html(topic);
+            }
+
+            function onConnectionLost(response) {
+                setTimeout(MQTTconnect, reconnectTimeout);
+                $('#status').html("connection lost: " + responseObject.errorMessage + ". Reconnecting");
+
+            };
+
+            function onMessageArrived(message) {
+
+                var topic = message.destinationName;
+                var payload = message.payloadString;
+
+                obj = JSON.parse(payload);
+
+
+                $('#ws').html('According to the Internet, my lab has <span id="temp">'
+                              +  Number((parseInt(obj.temp, 10) * 0.01).toFixed(2))
+                              + '&deg;C </span> at <span id="humid">' + Number((parseInt(obj.humid, 10) * 0.01).toFixed(2))
+                              + '%</span> humidity' );
+                              $('#nothinghint').hide();
+            };
+
+
+            $(document).ready(function() {
+                MQTTconnect();
+            });
+
+        </script>
+    </head>
+    <body>
+        <div id='ws'>
+            Connecting over WiFi... <br>
+            If nothing happens, try reloading the page. <br>
+            Or maybe  the $2 CPU got stuck. It does that often
+        </div>
+
+        <div id='footer'> 
+            <p>
+                <span id='status'> initializing </span>  and subscribed via <span  id='topic' > nothing </span>
+                over the actual internet (IPv4) to an ESP8226
+                &nbsp;
+                <a href="http://hackablemakersh.it/"> http://hackablemakersh.it/ </a>
+            </p>
+        </div>
+    </body>
+</html>
